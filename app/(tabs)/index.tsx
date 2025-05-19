@@ -1,75 +1,369 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { Colors } from "@/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { signOut } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { auth } from "../firebase/firebase";
 
 export default function HomeScreen() {
+  const [babyInCar, setBabyInCar] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [showCountdownScreen, setShowCountdownScreen] = useState(false);
+  const [bluetoothConnected, setBluetoothConnected] = useState(false);
+  const [autoDetectionEnabled, setAutoDetectionEnabled] = useState(true);
+
+  // Load saved settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedAutoDetection = await AsyncStorage.getItem(
+          "autoDetectionEnabled"
+        );
+        if (savedAutoDetection !== null) {
+          setAutoDetectionEnabled(savedAutoDetection === "true");
+        }
+      } catch (error) {
+        console.error("Error loading settings:", error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
+    if (!bluetoothConnected && babyInCar) {
+      // Start countdown
+      setCountdown(15);
+      setShowCountdownScreen(true);
+      const timer = setInterval(() => {
+        setCountdown((prevCount) => {
+          if (prevCount && prevCount <= 1) {
+            clearInterval(timer);
+            triggerAlarm();
+            return 0;
+          }
+          return prevCount ? prevCount - 1 : 0;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [bluetoothConnected]);
+
+  // Simulate Bluetooth connection status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // This would be replaced with actual Bluetooth detection logic
+      const randomConnected = Math.random() > 0.3;
+      setBluetoothConnected(randomConnected);
+
+      // If auto detection is enabled and Bluetooth connects, prompt about baby
+      if (autoDetectionEnabled && randomConnected && !babyInCar) {
+        promptBabyStatus();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [autoDetectionEnabled, babyInCar]);
+
+  const promptBabyStatus = () => {
+    // Default to baby in car for safety
+    setBabyInCar(true);
+
+    Alert.alert(
+      "Bluetooth Connected",
+      "BabyGuard has detected you're driving. Is your baby in the car?",
+      [
+        {
+          text: "No",
+          onPress: () => setBabyInCar(false),
+          style: "cancel",
+        },
+        {
+          text: "Yes (Default)",
+          onPress: () => {}, // Baby is already set to in car
+        },
+      ],
+      { cancelable: true } // Dismissing assumes "Yes"
+    );
+  };
+
+  const triggerAlarm = () => {
+    Alert.alert(
+      "ALERT: Check Your Baby!",
+      "Please confirm you've taken your baby out of the car!",
+      [
+        {
+          text: "I've Taken My Baby",
+          onPress: () => {
+            setBabyInCar(false);
+            setShowCountdownScreen(false);
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  const confirmBabyRemoved = () => {
+    setBabyInCar(false);
+    setShowCountdownScreen(false);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.replace("/signup");
+    } catch (error) {
+      Alert.alert("Error signing out", "Please try again");
+    }
+  };
+
+  const toggleBabyStatus = () => {
+    if (!babyInCar && !bluetoothConnected) {
+      Alert.alert(
+        "Bluetooth Not Connected",
+        "Baby monitoring can only be activated when connected to your car's Bluetooth."
+      );
+      return;
+    }
+    setBabyInCar(!babyInCar);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>BabyGuard</Text>
+        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+          <Ionicons name="log-out-outline" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.statusContainer}>
+        <View
+          style={[
+            styles.statusIndicator,
+            {
+              backgroundColor: bluetoothConnected
+                ? Colors.success
+                : Colors.error,
+            },
+          ]}
+        >
+          <Ionicons
+            name={bluetoothConnected ? "bluetooth" : "close-circle"}
+            size={30}
+            color="white"
+          />
+        </View>
+        <Text style={styles.statusText}>
+          {bluetoothConnected ? "Connected to Car" : "Not Connected"}
+        </Text>
+      </View>
+      {showCountdownScreen && (
+        <View style={styles.countdownOverlay}>
+          <View style={styles.countdownCard}>
+            <Text style={styles.countdownTitle}>Drive Ended</Text>
+            <Text style={styles.countdownText}>
+              Did you take your baby out of the car?
+            </Text>
+            <Text style={styles.countdownNumber}>{countdown}</Text>
+            <TouchableOpacity
+              style={styles.countdownButton}
+              onPress={confirmBabyRemoved}
+            >
+              <Text style={styles.countdownButtonText}>
+                Yes, I've Taken My Baby
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {/* Card section with baby status toggle */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Baby Status</Text>
+        {bluetoothConnected ? (
+          <>
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleText}>Baby in Car</Text>
+              <Switch
+                trackColor={{ false: Colors.lightGray, true: Colors.secondary }}
+                thumbColor={babyInCar ? Colors.white : Colors.white}
+                ios_backgroundColor={Colors.lightGray}
+                onValueChange={toggleBabyStatus}
+                value={babyInCar}
+              />
+            </View>
+            <Text style={styles.statusDescription}>
+              {babyInCar
+                ? "You have indicated that your baby is in the car"
+                : "You have indicated that your baby is not in the car"}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.statusDescription}>
+            Connect to your car's Bluetooth to enable baby monitoring
+          </Text>
+        )}
+      </View>
+      {babyInCar && bluetoothConnected && (
+        <View style={styles.alertCard}>
+          <Ionicons
+            name="information-circle"
+            size={24}
+            color={Colors.tertiary}
+          />
+          <Text style={styles.alertText}>
+            BabyGuard is monitoring. You'll be alerted when you disconnect from
+            the car's Bluetooth.
+          </Text>
+        </View>
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    padding: 16,
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: Colors.primary,
+  },
+  signOutButton: {
+    padding: 8,
+  },
+  statusContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  statusIndicator: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
+  statusText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: Colors.darkGray,
+  },
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  alertCard: {
+    backgroundColor: Colors.lightGray,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  alertText: {
+    fontSize: 14,
+    color: Colors.black,
+    marginLeft: 8,
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: Colors.primary,
+    marginBottom: 16,
+  },
+  toggleContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  toggleText: {
+    fontSize: 16,
+    color: Colors.black,
+  },
+  statusDescription: {
+    fontSize: 14,
+    color: Colors.darkGray,
+    fontStyle: "italic",
+  },
+  countdownOverlay: {
+    position: "absolute",
+    top: 0,
     left: 0,
-    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  countdownCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 24,
+    width: "80%",
+    alignItems: "center",
+  },
+  countdownTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: Colors.primary,
+    marginBottom: 16,
+  },
+  countdownText: {
+    fontSize: 18,
+    textAlign: "center",
+    marginBottom: 24,
+    color: Colors.black,
+  },
+  countdownNumber: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: Colors.tertiary,
+    marginBottom: 24,
+  },
+  countdownButton: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  countdownButtonText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
