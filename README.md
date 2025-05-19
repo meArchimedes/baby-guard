@@ -1,21 +1,71 @@
-<<<<<<< HEAD
-# Welcome to your Expo app 👋
+# 👶 BabyGuard
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**BabyGuard** is a mobile safety app designed to prevent accidental harm by reminding caregivers not to leave babies in cars. It runs in the background, detects when driving starts via Bluetooth, and triggers alerts after a drive if the user doesn’t confirm the baby was removed from the car.
 
-## Get started
+---
 
-1. Install dependencies
+## 🚀 Features
 
-   ```bash
-   npm install
-   ```
+- Detects start/stop of driving using Bluetooth connection
+- Asks if a baby is in the car at the beginning of a drive
+- Triggers an alarm after the drive ends if baby removal isn't confirmed
+- Swipe-to-dismiss countdown screen
+- Clean, modern interface using a consistent color theme: `#2730d5`, `#eefb18`, and light blue
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🧱 Tech Stack
+
+| Layer         | Technology                |
+|---------------|---------------------------|
+| Frontend      | [Expo](https://expo.dev/), React Native (TypeScript) |
+| Backend       | TBD (Will be simple and lightweight — Firebase or .NET API planned) |
+| State Mgmt    | React Context API (or Redux, TBD) |
+| Version Control | Git + GitHub |
+| Task Management | Jira (invite-only) |
+
+---
+
+## 📦 Folder Structure
+baby-guard/
+├── app/ # App screens
+├── assets/ # Images, fonts
+├── components/ # Reusable UI components
+├── constants/ # Colors, layouts
+├── hooks/ # Custom React hooks
+├── scripts/ # Utility scripts
+├── .expo/ # Expo config
+├── .vscode/ # Editor settings
+├── package.json
+├── app.json
+├── tsconfig.json
+└── README.md
+
+## 📱 Getting Started (Local Dev)
+
+> You can run this without a smartphone using browser/dev tools.
+
+1. Clone the repo:
+```bash
+git clone https://github.com/YOUR_USERNAME/baby-guard.git
+cd baby-guard
+
+install dependencies
+npm install
+
+Start the project (offline + browser mode)
+npx expo start --offline --web
+
+
+
+
+
+
+
+
+
+
+
 
 In the output, you'll find options to open the app in a
 
@@ -26,30 +76,4 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-=======
-# baby-gaurd
-Open-source app to remind users not to leave babies in cars
->>>>>>> 1c8eba497356ebf1038daeddb698af2a6a580d2d
