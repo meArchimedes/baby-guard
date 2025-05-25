@@ -6,14 +6,23 @@ import { signOut } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { BleManager } from "react-native-ble-plx";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { auth } from "../firebase/firebase";
+
+const bleManager = new BleManager();
+
+type CarDevice = {
+  id: string;
+  name: string;
+};
 
 export default function HomeScreen() {
   const [babyInCar, setBabyInCar] = useState(false);
@@ -21,19 +30,27 @@ export default function HomeScreen() {
   const [showCountdownScreen, setShowCountdownScreen] = useState(false);
   const [bluetoothConnected, setBluetoothConnected] = useState(false);
   const [autoDetectionEnabled, setAutoDetectionEnabled] = useState(true);
+  const [alwaysAssumeInCar, setAlwaysAssumeInCar] = useState(false);
+  const [carDevices, setCarDevices] = useState<CarDevice[]>([]);
+  const [connectedCarDevice, setConnectedCarDevice] = useState<CarDevice | null>(null);
 
-  // Load saved settings
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedAutoDetection = await AsyncStorage.getItem(
-          "autoDetectionEnabled"
-        );
-        if (savedAutoDetection !== null) {
-          setAutoDetectionEnabled(savedAutoDetection === "true");
+        const autoDetect = await AsyncStorage.getItem('autoDetectionEnabled');
+        setAutoDetectionEnabled(autoDetect !== 'false');
+
+        const assumeInCar = await AsyncStorage.getItem('alwaysAssumeInCar');
+        setAlwaysAssumeInCar(assumeInCar === 'true');
+
+        const savedDevices = await AsyncStorage.getItem('carDevices');
+        if (savedDevices) {
+          setCarDevices(JSON.parse(savedDevices));
+        } else {
+          router.replace('/setup');
         }
       } catch (error) {
-        console.error("Error loading settings:", error);
+        console.error('Error loading settings:', error);
       }
     };
 
@@ -41,8 +58,44 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    if (carDevices.length === 0) return;
+
+    const startMonitoring = () => {
+      bleManager.startDeviceScan(null, null, (error, device) => {
+        if (error) {
+          console.log("Error scanning for devices:", error);
+          return;
+        }
+        
+        if (device) {
+          const carDevice = carDevices.find(d => d.id === device.id);
+          if (carDevice) {
+            setBluetoothConnected(true);
+            setConnectedCarDevice(carDevice);
+            
+            if (autoDetectionEnabled && !babyInCar) {
+              if (alwaysAssumeInCar) {
+                setBabyInCar(true);
+              } else {
+                promptBabyStatus(carDevice.name);
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const monitoringInterval = setInterval(startMonitoring, 5000);
+    startMonitoring();
+
+    return () => {
+      clearInterval(monitoringInterval);
+      bleManager.stopDeviceScan();
+    };
+  }, [carDevices, autoDetectionEnabled, alwaysAssumeInCar, babyInCar]);
+
+  useEffect(() => {
     if (!bluetoothConnected && babyInCar) {
-      // Start countdown
       setCountdown(15);
       setShowCountdownScreen(true);
       const timer = setInterval(() => {
@@ -57,31 +110,12 @@ export default function HomeScreen() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [bluetoothConnected]);
+  }, [bluetoothConnected, babyInCar]);
 
-  // Simulate Bluetooth connection status
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // This would be replaced with actual Bluetooth detection logic
-      const randomConnected = Math.random() > 0.3;
-      setBluetoothConnected(randomConnected);
-
-      // If auto detection is enabled and Bluetooth connects, prompt about baby
-      if (autoDetectionEnabled && randomConnected && !babyInCar) {
-        promptBabyStatus();
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [autoDetectionEnabled, babyInCar]);
-
-  const promptBabyStatus = () => {
-    // Default to baby in car for safety
-    setBabyInCar(true);
-
+  const promptBabyStatus = (deviceName: string) => {
     Alert.alert(
-      "Bluetooth Connected",
-      "BabyGuard has detected you're driving. Is your baby in the car?",
+      "Connected to Car",
+      `Connected to ${deviceName}. Is your baby in the car?`,
       [
         {
           text: "No",
@@ -89,11 +123,11 @@ export default function HomeScreen() {
           style: "cancel",
         },
         {
-          text: "Yes (Default)",
-          onPress: () => {}, // Baby is already set to in car
+          text: "Yes",
+          onPress: () => setBabyInCar(true),
         },
       ],
-      { cancelable: true } // Dismissing assumes "Yes"
+      { cancelable: true }
     );
   };
 
@@ -147,27 +181,74 @@ export default function HomeScreen() {
           <Ionicons name="log-out-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
       </View>
-      <View style={styles.statusContainer}>
-        <View
-          style={[
-            styles.statusIndicator,
-            {
-              backgroundColor: bluetoothConnected
-                ? Colors.success
-                : Colors.error,
-            },
-          ]}
-        >
-          <Ionicons
-            name={bluetoothConnected ? "bluetooth" : "close-circle"}
-            size={30}
-            color="white"
-          />
+
+      <ScrollView>
+        <View style={styles.statusContainer}>
+          <View
+            style={[
+              styles.statusIndicator,
+              {
+                backgroundColor: bluetoothConnected
+                  ? Colors.success
+                  : Colors.error,
+              },
+            ]}
+          >
+            <Ionicons
+              name={bluetoothConnected ? "bluetooth" : "close-circle"}
+              size={30}
+              color="white"
+            />
+          </View>
+          <Text style={styles.statusText}>
+            {bluetoothConnected 
+              ? `Connected to ${connectedCarDevice?.name}`
+              : "Not Connected"}
+          </Text>
         </View>
-        <Text style={styles.statusText}>
-          {bluetoothConnected ? "Connected to Car" : "Not Connected"}
-        </Text>
-      </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Baby Status</Text>
+          {bluetoothConnected ? (
+            <>
+              <View style={styles.toggleContainer}>
+                <Text style={styles.toggleText}>Baby in Car</Text>
+                <Switch
+                  trackColor={{ false: Colors.lightGray, true: Colors.secondary }}
+                  thumbColor={babyInCar ? Colors.white : Colors.white}
+                  ios_backgroundColor={Colors.lightGray}
+                  onValueChange={toggleBabyStatus}
+                  value={babyInCar}
+                />
+              </View>
+              <Text style={styles.statusDescription}>
+                {babyInCar
+                  ? "You have indicated that your baby is in the car"
+                  : "You have indicated that your baby is not in the car"}
+              </Text>
+            </>
+          ) : (
+            <Text style={styles.statusDescription}>
+              Connect to your car's Bluetooth to enable baby monitoring
+            </Text>
+          )}
+        </View>
+
+        {babyInCar && bluetoothConnected && (
+          <View style={styles.alertCard}>
+            <Ionicons
+              name="information-circle"
+              size={24}
+              color={Colors.tertiary}
+            />
+            <Text style={styles.alertText}>
+              BabyGuard is monitoring. You'll be alerted when you disconnect from
+              the car's Bluetooth.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
       {showCountdownScreen && (
         <View style={styles.countdownOverlay}>
           <View style={styles.countdownCard}>
@@ -185,46 +266,6 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      )}
-      {/* Card section with baby status toggle */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Baby Status</Text>
-        {bluetoothConnected ? (
-          <>
-            <View style={styles.toggleContainer}>
-              <Text style={styles.toggleText}>Baby in Car</Text>
-              <Switch
-                trackColor={{ false: Colors.lightGray, true: Colors.secondary }}
-                thumbColor={babyInCar ? Colors.white : Colors.white}
-                ios_backgroundColor={Colors.lightGray}
-                onValueChange={toggleBabyStatus}
-                value={babyInCar}
-              />
-            </View>
-            <Text style={styles.statusDescription}>
-              {babyInCar
-                ? "You have indicated that your baby is in the car"
-                : "You have indicated that your baby is not in the car"}
-            </Text>
-          </>
-        ) : (
-          <Text style={styles.statusDescription}>
-            Connect to your car's Bluetooth to enable baby monitoring
-          </Text>
-        )}
-      </View>
-      {babyInCar && bluetoothConnected && (
-        <View style={styles.alertCard}>
-          <Ionicons
-            name="information-circle"
-            size={24}
-            color={Colors.tertiary}
-          />
-          <Text style={styles.alertText}>
-            BabyGuard is monitoring. You'll be alerted when you disconnect from
-            the car's Bluetooth.
-          </Text>
         </View>
       )}
     </SafeAreaView>
