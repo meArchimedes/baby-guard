@@ -23,8 +23,12 @@ export function useBluetoothDevices() {
       try {
         await bluetoothService.initialize();
         setIsInitialized(true);
+        
+        // Load mock devices initially
+        const initialDevices = await bluetoothService.scanForDevices();
+        setDevices(initialDevices);
       } catch (error) {
-        console.log('Bluetooth initialization error (mock):', error);
+        console.log('Bluetooth initialization error:', error);
       }
     };
 
@@ -42,8 +46,10 @@ export function useBluetoothDevices() {
     try {
       const foundDevices = await bluetoothService.scanForDevices();
       setDevices(foundDevices);
+      return foundDevices;
     } catch (error) {
-      console.log('Error scanning for devices (mock):', error);
+      console.log('Error scanning for devices:', error);
+      throw error;
     } finally {
       setIsScanning(false);
     }
@@ -62,7 +68,7 @@ export function useBluetoothDevices() {
       }
       return false;
     } catch (error) {
-      console.log('Error connecting to device (mock):', error);
+      console.log('Error connecting to device:', error);
       return false;
     }
   };
@@ -73,7 +79,7 @@ export function useBluetoothDevices() {
       await bluetoothService.disconnect();
       setConnectedDevice(null);
     } catch (error) {
-      console.log('Error disconnecting (mock):', error);
+      console.log('Error disconnecting:', error);
     }
   };
 
@@ -83,7 +89,7 @@ export function useBluetoothDevices() {
       const isConnected = await bluetoothService.isConnected();
       return isConnected;
     } catch (error) {
-      console.log('Error checking connection (mock):', error);
+      console.log('Error checking connection:', error);
       return false;
     }
   };

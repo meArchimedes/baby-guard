@@ -16,9 +16,11 @@ export interface BluetoothService {
 // Mock implementation for Expo Go and testing
 class MockBluetoothService implements BluetoothService {
   private mockConnected: boolean = false;
+  private connectedDeviceId: string | null = null;
   private mockDevices = [
-    { id: 'mock-device-1', name: 'Mock Car Device', rssi: -65 },
-    { id: 'mock-device-2', name: 'Mock Baby Seat', rssi: -70 }
+    { id: 'mock-device-1', name: 'Toyota Camry', rssi: -65 },
+    { id: 'mock-device-2', name: 'Honda Civic', rssi: -70 },
+    { id: 'mock-device-3', name: 'Ford Explorer', rssi: -75 }
   ];
 
   async initialize(): Promise<void> {
@@ -28,23 +30,34 @@ class MockBluetoothService implements BluetoothService {
 
   async scanForDevices(): Promise<any[]> {
     console.log('Mock scanning for devices');
-    return Promise.resolve(this.mockDevices);
+    // Simulate a delay for scanning
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(this.mockDevices);
+      }, 1500);
+    });
   }
 
   async connectToDevice(deviceId: string): Promise<boolean> {
     console.log(`Mock connecting to device: ${deviceId}`);
     this.mockConnected = true;
+    this.connectedDeviceId = deviceId;
     return Promise.resolve(true);
   }
 
   async disconnect(): Promise<void> {
     console.log('Mock disconnecting from device');
     this.mockConnected = false;
+    this.connectedDeviceId = null;
     return Promise.resolve();
   }
 
   async isConnected(): Promise<boolean> {
     return Promise.resolve(this.mockConnected);
+  }
+  
+  getConnectedDeviceId(): string | null {
+    return this.connectedDeviceId;
   }
 }
 

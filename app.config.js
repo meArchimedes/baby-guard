@@ -28,7 +28,7 @@ module.exports = {
     },
     extra: {
       disableDependencyValidation: true,
-      offlineMode: true
+      // offlineMode: true
     }
   }
 };
