@@ -1,9 +1,27 @@
-import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import {
+    createUserWithEmailAndPassword,
+    getAuth,
+    GoogleAuthProvider,
+    signInWithEmailAndPassword,
+    signInWithPopup,
+} from "firebase/auth";
 import { useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import firebaseApp from "../firebase";
 
-export default function AuthScreen() {
+export default function AuthScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
@@ -40,16 +58,30 @@ export default function AuthScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const auth = getAuth(firebaseApp);
+    if (!email) {
+      Alert.alert("Forgot Password", "Please enter your email address first.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert("Password Reset", "A password reset email has been sent.");
+    } catch (error) {
+      Alert.alert("Reset Error", error.message);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
         <StatusBar barStyle="light-content" backgroundColor="#0a1a4c" />
         <View style={styles.headerContainer}>
-          <Image 
-            source={require('../assets/images/favicon.png')} 
+          <Image
+            source={require("../assets/images/favicon.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />
@@ -57,7 +89,9 @@ export default function AuthScreen() {
           <Text style={styles.subtitle}>Keep your little ones safe</Text>
         </View>
         <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>{isSignUp ? "Create Account" : "Welcome Back"}</Text>
+          <Text style={styles.formTitle}>
+            {isSignUp ? "Create Account" : "Welcome Back"}
+          </Text>
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Email</Text>
             <TextInput
@@ -79,7 +113,10 @@ export default function AuthScreen() {
               onChangeText={setPassword}
             />
           </View>
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => navigation.navigate("ForgotPassword")}
+          >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
           {isSignUp ? (
@@ -96,7 +133,10 @@ export default function AuthScreen() {
             <Text style={styles.orText}>OR</Text>
             <View style={styles.divider} />
           </View>
-          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn}>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleSignIn}
+          >
             <Text style={styles.googleButtonText}>Continue with Google</Text>
           </TouchableOpacity>
           <View style={styles.signupContainer}>
@@ -127,8 +167,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0a1a4c",
   },
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: "#0a1a4c",
   },
   headerContainer: {
@@ -141,10 +181,10 @@ const styles = StyleSheet.create({
     height: 80,
     marginBottom: 16,
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: "bold", 
-    color: "#ffffff", 
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#ffffff",
     marginBottom: 8,
   },
   subtitle: {

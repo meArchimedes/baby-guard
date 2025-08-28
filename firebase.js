@@ -1,6 +1,7 @@
 // Firebase initialization file
 
 import { initializeApp } from 'firebase/app';
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAql8ce63AtCMF0Ly9EcrZJZSlWk7blrXs",
@@ -12,5 +13,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Set session persistence (user will be signed out when browser closes)
+setPersistence(auth, browserSessionPersistence).catch((error) => {
+  console.log('Persistence error:', error);
+});
 
 export default app;
